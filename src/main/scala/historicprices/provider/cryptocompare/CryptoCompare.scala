@@ -7,7 +7,7 @@ object Cryptocompare {
   import java.util.Date
 
   import model.{Currency, PriceTableForCurrency}
-  import provider.api.get
+  import model.Utils.get
 
 
   // get historic prices from cryptoCompareHistoricPrices
@@ -46,6 +46,8 @@ object Cryptocompare {
         //HACK only want AUD  should filter this before hand or allow all info back!!!
         val filtered = pa.quotePrices.filter(p => p._1 == Currency("AUD"))
         filtered.map(p => PriceTableForCurrency(fromcurrency.head, Map(date -> p._2))).head // lots of dodgy head shit need Non empty list or a single value
+
+
       }
     }
   }
