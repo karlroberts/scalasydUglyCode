@@ -23,61 +23,40 @@ object api {
   def mapifyHistoricPrices(knownPrices: List[HistoricPrice], xtrades: List[Trade] ): (PriceTable, List[PriceTableForCurrency]) = {
     import model.{PriceTableAtDate, PriceTableForCurrency}
     import provider.coinspot.CoinspotParser
+
     import scala.collection.mutable.ListBuffer
 
     // VARIABLES
-    var pt4Cs: PriceTable = Map();
     var ptatDs: Map[LocalDateTime, PriceTableAtDate] = Map();
 
     // VALUES
     val lb: ListBuffer[PriceTableForCurrency] = ListBuffer();
 
     // walk the currently known prices
-    pt4Cs = knownPrices groupBy(_.base) mapValues(hps => {
+    val knownPT4CMap = knownPrices groupBy(_.base) mapValues(hps => {
       hps.map { hp => (hp.localDateTime -> hp.quotePrice)} toMap
     }) map (tup => {tup._1 -> PriceTableForCurrency(tup._1, tup._2)})
 
+    //filter out crosstrades for which we already know the price at a date using knownPT4CMap to discriminate
+    // n.b. use Option.isEmpty to negate the positive logic
+    //then Map the remaining trades into Tasks to fetch the missing price from the internet.
+    val historicTasks: List[PriceTableForCurrency] = xtrades.filter(xt => {
+      for {
+        pt4c <- knownPT4CMap.get(xt.base)
+        x <- pt4c.prices.get(LocalDateTime.parse(xt.datetime,CoinspotParser.df))
+      } yield x
+    }.isEmpty
+    ).map(xt => historicPriceInAUDForCoin(xt.base, LocalDateTime.parse(xt.datetime,CoinspotParser.df)))
 
+    //run all the tasks in parralel
+//    val newPT4Cs: List[PriceTableForCurrency] = Task.gatherUnordered(historicTasks).run
 
-
-    //todo re-write to map to a List of Futures of prices
-    // Walk the cross trades
-    // if we cant find a price in our known history then go to the internet and add it to the maps
-    xtrades.foreach(xt => {
-      //getthe price at time for the base currency
-      if(pt4Cs.contains(xt.base)) {
-        //NB we now the key exists so can safly get dont need option
-
-        val psAtDatetime = pt4Cs.get(xt.base).get
-        if(!psAtDatetime.prices.contains(LocalDateTime.parse(xt.datetime,CoinspotParser.df))) {
-          val historic = historicPriceInAUDForCoin(xt.base, LocalDateTime.parse(xt.datetime,CoinspotParser.df))
-
-          //update the list of newly discovered prices
-          lb += historic
-
-          // update the pt4Cs that we are Building up
-          pt4Cs = pt4Cs + (xt.base -> historic)
-
-        }
-        else {
-          //do nothing we have it.
-        }
-      } else {
-        // we dont have it so add a new key and value for the PriceTable map
-
-        //          val psAtDt = psAtDatetime.prices + (LocalDateTime.parse(xt.datetime,CoinspotParser.df) -> xt.quoteprice)
-        val historic = historicPriceInAUDForCoin(xt.base, LocalDateTime.parse(xt.datetime,CoinspotParser.df))
-
-        //update the list of newly discovered prices
-        lb += historic
-
-        // update the pt4Cs that we are Building up
-        pt4Cs = pt4Cs + (xt.base -> historic)
-      }
-
+    // fold down the
+    val ret: Map[Currency, PriceTableForCurrency] = historicTasks.foldLeft(knownPT4CMap) ((acc,next) => {
+      acc + (next.currency -> next)
     })
 
-    (pt4Cs, lb.toList)
+    (ret, historicTasks)
   }
 
 
