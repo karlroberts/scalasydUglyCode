@@ -91,21 +91,6 @@ object api {
   }
 
 
-
-
-  /**
-    * Wrap the fetch from website in a scalaz Task
-    * @param coin
-    * @param atdatetime
-    * @return
-    */
-  def getHistoricTask(coin: Currency, atdatetime: LocalDateTime): Task[PriceTableForCurrency] = {
-    Task {
-      historicPriceInAUDForCoin(coin, atdatetime) }
-  }
-
-
-
   /**
     * wraps the provider specific call in a simple usable interface
     * @param coin
