@@ -63,6 +63,11 @@ object api {
     }) map (tup => {tup._1 -> PriceTableForCurrency(tup._1, tup._2)})
     println(s"<>><><><><2<>><><><><>< = $foo")
 
+    val bar = knownPrices groupBy(_.base) mapValues(hps => {
+      hps.map { hp => (hp.localDateTime -> hp.quotePrice)} toMap
+    }) map (tup => {tup._1 -> PriceTableForCurrency(tup._1, tup._2)})
+
+    println(s"<>><><><><3<>><><><><>< = $bar")
 
 
     //todo re-write to map to a List of Futures of prices
