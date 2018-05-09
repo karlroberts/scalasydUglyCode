@@ -48,7 +48,7 @@ object Main extends App {
   println(priceTable)
 
   //fix up the historic file)
-//  val hpf = Some(theHistoricPricesFileName)
+//  val hpf = Some(theHistoricPricesFileName)git
   val hpf = options.get('historicpricesFile)
   hpf.foreach(f => {
     println(s"WRITING ><><><><><><>< to file ${f.toString}")
