@@ -24,14 +24,6 @@ object api {
     import model.{PriceTableAtDate, PriceTableForCurrency}
     import provider.coinspot.CoinspotParser
 
-    import scala.collection.mutable.ListBuffer
-
-    // VARIABLES
-    var ptatDs: Map[LocalDateTime, PriceTableAtDate] = Map();
-
-    // VALUES
-    val lb: ListBuffer[PriceTableForCurrency] = ListBuffer();
-
     // walk the currently known prices
     val knownPT4CMap = knownPrices groupBy(_.base) mapValues(hps => {
       hps.map { hp => (hp.localDateTime -> hp.quotePrice)} toMap
@@ -40,23 +32,23 @@ object api {
     //filter out crosstrades for which we already know the price at a date using knownPT4CMap to discriminate
     // n.b. use Option.isEmpty to negate the positive logic
     //then Map the remaining trades into Tasks to fetch the missing price from the internet.
-    val historicTasks: List[PriceTableForCurrency] = xtrades.filter(xt => {
+    val historicTasks: List[Task[PriceTableForCurrency]] = xtrades.filter(xt => {
       for {
         pt4c <- knownPT4CMap.get(xt.base)
         x <- pt4c.prices.get(LocalDateTime.parse(xt.datetime,CoinspotParser.df))
       } yield x
     }.isEmpty
-    ).map(xt => historicPriceInAUDForCoin(xt.base, LocalDateTime.parse(xt.datetime,CoinspotParser.df)))
+    ).map(xt => getHistoricTask(xt.base, LocalDateTime.parse(xt.datetime,CoinspotParser.df)))
 
     //run all the tasks in parralel
-//    val newPT4Cs: List[PriceTableForCurrency] = Task.gatherUnordered(historicTasks).run
+    val gatheredHistoricPrices: List[PriceTableForCurrency] = Task.gatherUnordered(historicTasks).run
 
     // fold down the
-    val ret: Map[Currency, PriceTableForCurrency] = historicTasks.foldLeft(knownPT4CMap) ((acc,next) => {
+    val ret: Map[Currency, PriceTableForCurrency] = gatheredHistoricPrices.foldLeft(knownPT4CMap) ((acc,next) => {
       acc + (next.currency -> next)
     })
 
-    (ret, historicTasks)
+    (ret, gatheredHistoricPrices)
   }
 
 
@@ -71,6 +63,17 @@ object api {
     import model.Utils._
     //calls cryptocompare rest API need to convert currency symbols from coinspot to crypto compare where necessary
     cryptoCompareHistoricPrices(date, List(coin).map(symbolMapFromCoinspotToCrytoCOmpare))
+  }
+
+  /**
+    * Wrap the fetch from website in a scalaz Task
+    * @param coin
+    * @param atdatetime
+    * @return
+    */
+  def getHistoricTask(coin: Currency, atdatetime: LocalDateTime): Task[PriceTableForCurrency] = {
+    Task {
+      historicPriceInAUDForCoin(coin, atdatetime) }
   }
 
 
