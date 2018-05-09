@@ -33,41 +33,11 @@ object api {
     val lb: ListBuffer[PriceTableForCurrency] = ListBuffer();
 
     // walk the currently known prices
-    for(kp <- knownPrices) {
-      if(pt4Cs.contains(kp.base)) {
-        val psAtDatetime = pt4Cs.get(kp.base).get
-        if(psAtDatetime.prices.contains(kp.localDateTime)) {
-          //ok we have it do nothing
-          //val price = psAtDatetime.prices.get(kp.localDateTime).get
-        }
-        else {
-          val psAtDt = psAtDatetime.prices + (kp.localDateTime -> kp.quotePrice)
-          pt4Cs = pt4Cs + (kp.base -> PriceTableForCurrency(kp.base, psAtDt))
-        }
-      }
-      else {
-        pt4Cs = pt4Cs + (kp.base -> PriceTableForCurrency(kp.base, Map(kp.localDateTime -> kp.quotePrice)) )
-      }
-    }
-
-
-    println("HACK: Look at these they are equivalent")
-    println(s"<>><><><><1<>><><><><>< = $pt4Cs")
-
-    // map the List of known prices to a List of (Currency, PriceTab)
-    // create a tuple from HistoricPrice but make it a tuple of tuple so we can build a map of map
-    val foo = knownPrices map { kp =>
-      (kp.base, kp.localDateTime -> kp.quotePrice)
-    } groupBy(_._1) mapValues( curDatePrices => {
-      curDatePrices map (_._2) toMap
-    }) map (tup => {tup._1 -> PriceTableForCurrency(tup._1, tup._2)})
-    println(s"<>><><><><2<>><><><><>< = $foo")
-
-    val bar = knownPrices groupBy(_.base) mapValues(hps => {
+    pt4Cs = knownPrices groupBy(_.base) mapValues(hps => {
       hps.map { hp => (hp.localDateTime -> hp.quotePrice)} toMap
     }) map (tup => {tup._1 -> PriceTableForCurrency(tup._1, tup._2)})
 
-    println(s"<>><><><><3<>><><><><>< = $bar")
+
 
 
     //todo re-write to map to a List of Futures of prices
