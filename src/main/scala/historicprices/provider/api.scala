@@ -50,6 +50,21 @@ object api {
       }
     }
 
+
+    println("HACK: Look at these they are equivalent")
+    println(s"<>><><><><1<>><><><><>< = $pt4Cs")
+
+    // map the List of known prices to a List of (Currency, PriceTab)
+    // create a tuple from HistoricPrice but make it a tuple of tuple so we can build a map of map
+    val foo = knownPrices map { kp =>
+      (kp.base, kp.localDateTime -> kp.quotePrice)
+    } groupBy(_._1) mapValues( curDatePrices => {
+      curDatePrices map (_._2) toMap
+    }) map (tup => {tup._1 -> PriceTableForCurrency(tup._1, tup._2)})
+    println(s"<>><><><><2<>><><><><>< = $foo")
+
+
+
     //todo re-write to map to a List of Futures of prices
     // Walk the cross trades
     // if we cant find a price in our known history then go to the internet and add it to the maps
