@@ -40,7 +40,7 @@ object api {
     //filter out crosstrades for which we already know the price at a date using knownPT4CMap to discriminate
     // n.b. use Option.isEmpty to negate the positive logic
     //then Map the remaining trades into Tasks to fetch the missing price from the internet.
-    val historicTasks: List[PriceTableForCurrency] = xtrades.filter(xt => {
+    val historicPrices: List[PriceTableForCurrency] = xtrades.filter(xt => {
       for {
         pt4c <- knownPT4CMap.get(xt.base)
         x <- pt4c.prices.get(LocalDateTime.parse(xt.datetime,CoinspotParser.df))
@@ -52,11 +52,11 @@ object api {
 //    val newPT4Cs: List[PriceTableForCurrency] = Task.gatherUnordered(historicTasks).run
 
     // fold down the
-    val ret: Map[Currency, PriceTableForCurrency] = historicTasks.foldLeft(knownPT4CMap) ((acc,next) => {
+    val ret: Map[Currency, PriceTableForCurrency] = historicPrices.foldLeft(knownPT4CMap) ((acc,next) => {
       acc + (next.currency -> next)
     })
 
-    (ret, historicTasks)
+    (ret, historicPrices)
   }
 
 
